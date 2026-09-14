@@ -1,0 +1,48 @@
+version: "3.8"
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: syrian_store
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    depends_on:
+      - db
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/syrian_store?schema=public
+      JWT_ACCESS_SECRET: "my_secret_access_123"
+      JWT_REFRESH_SECRET: "my_secret_refresh_456"
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost}
+      STORAGE_DRIVER: local
+      SHAM_CASH_API_URL: ${SHAM_CASH_API_URL:-}
+      SHAM_CASH_API_KEY: ${SHAM_CASH_API_KEY:-}
+      SHAM_CASH_MERCHANT_ID: ${SHAM_CASH_MERCHANT_ID:-}
+      SHAM_CASH_SECRET: ${SHAM_CASH_SECRET:-}
+    ports:
+      - "4000:4000"
+    volumes:
+      - uploads_data:/app/uploads
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+
+volumes:
+  db_data:
+  uploads_data:
