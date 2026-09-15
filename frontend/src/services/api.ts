@@ -1,6 +1,11 @@
 import axios from "axios";
 
-export const api = axios.create({ baseURL: "/api", withCredentials: true });
+const BASE_URL = import.meta.env.VITE_API_URL || "https://syrian-store.onrender.com/api";
+
+export const api = axios.create({ 
+  baseURL: BASE_URL, 
+  withCredentials: true 
+});
 
 let accessToken: string | null = null;
 let refreshPromise: Promise<string | null> | null = null;
