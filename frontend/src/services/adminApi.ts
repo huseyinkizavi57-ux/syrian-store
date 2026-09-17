@@ -1,65 +1,36 @@
 import axios from "axios";
-
-const BASE_URL = import.meta.env.VITE_API_URL || "https://syrian-store.onrender.com/api";
+import toast from "react-hot-toast";
 
 export const adminApi = axios.create({
-  baseURL: BASE_URL,
+  baseURL: (import.meta as any).env?.VITE_API_BASE_URL || "http://localhost:5000/api",
   withCredentials: true,
 });
 
-let adminAccessToken: string | null = null;
-let adminRefreshPromise: Promise<string | null> | null = null;
+// إرفاق توكن الأدمن تلقائياً مع كل طلب
+adminApi.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem("adminToken");
+    if (token && config.headers) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
-export function setAdminAccessToken(token: string | null) {
-  adminAccessToken = token;
-}
-
-adminApi.interceptors.request.use((config) => {
-  if (adminAccessToken) {
-    config.headers.Authorization = `Bearer ${adminAccessToken}`;
-  }
-  return config;
-});
-
+// اعتراض انتهاء صلاحية الجلسة (401) وإعادة التوجيه لصفحة الدخول
 adminApi.interceptors.response.use(
-  (res) => res,
-  async (error) => {
-    const original = error.config;
-    if (error.response?.status === 401 && !original._retry && !original.url.includes("/auth/")) {
-      original._retry = true;
-      try {
-        if (!adminRefreshPromise) {
-          adminRefreshPromise = adminApi
-            .post("/admin/refresh")
-            .then((r) => {
-              const token = r.data.data.accessToken as string;
-              setAdminAccessToken(token);
-              return token;
-            })
-            .catch(() => {
-              setAdminAccessToken(null);
-              return null;
-            })
-            .finally(() => {
-              adminRefreshPromise = null;
-            });
-        }
-        const newToken = await adminRefreshPromise;
-        if (newToken) {
-          original.headers.Authorization = `Bearer ${newToken}`;
-          return adminApi(original);
-        }
-      } catch {
-        // fall through
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      if (!window.location.pathname.includes("/admin/login")) {
+        localStorage.removeItem("adminToken");
+        toast.error("انتهت صلاحية الجلسة، يرجى تسجيل الدخول مجدداً");
+        setTimeout(() => {
+          window.location.href = "/admin/login";
+        }, 1200);
       }
     }
     return Promise.reject(error);
   }
 );
-
-export function getAdminApiErrorMessage(err: unknown, fallback = "حدث خطأ غير متوقع"): string {
-  if (axios.isAxiosError(err)) {
-    return err.response?.data?.error?.message ?? fallback;
-  }
-  return fallback;
-}

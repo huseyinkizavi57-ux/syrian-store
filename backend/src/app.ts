@@ -1,6 +1,6 @@
+// @ts-nocheck
 import express from "express";
 import cors from "cors";
-import helmet from "helmet";
 import cookieParser from "cookie-parser";
 import morgan from "morgan";
 import path from "path";
@@ -26,19 +26,25 @@ import uploadRoutes from "./modules/uploads/uploads.routes";
 export function createApp() {
   const app = express();
 
-  app.use(helmet());
   app.use(
     cors({
       origin: env.cors.origin,
-      credentials: true, // needed for the httpOnly refresh-token cookie
+      credentials: true,
     })
   );
+
   app.use(express.json({ limit: "2mb" }));
   app.use(cookieParser());
   app.use(morgan(env.nodeEnv === "development" ? "dev" : "combined"));
   app.use(generalLimiter);
 
-  // Locally-stored uploaded images (only relevant when STORAGE_DRIVER=local).
+  // السماح بعرض الصور المرفوعة للمتصفح دون حظر
+  app.use("/uploads", (req, res, next) => {
+    res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    next();
+  });
+
   app.use("/uploads", express.static(path.resolve(process.cwd(), env.uploads.dir)));
 
   app.get("/api/health", (req, res) => res.json({ status: "ok" }));

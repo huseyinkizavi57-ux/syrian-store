@@ -54,10 +54,22 @@ router.post(
   "/:id/status",
   requireAdmin,
   requirePermission("products:write"),
-  validate(z.object({ body: z.object({ status: z.enum(["ACTIVE", "INACTIVE", "ARCHIVED"]) }), query: z.object({}).optional(), params: z.object({}).optional() })),
+  validate(z.object({
+    params: z.object({ id: z.string().min(1) }),
+    body: z.object({ status: z.enum(["ACTIVE", "INACTIVE", "ARCHIVED"]) }),
+    query: z.object({}).optional()
+  })),
   asyncHandler(async (req, res) => {
-    const product = await service.setProductStatus(req.params.id, req.body.status);
-    await writeAuditLog({ adminId: req.admin!.id, action: "STATUS_CHANGE", entityType: "Product", entityId: product.id, description: `تغيرت حالة المنتج إلى ${req.body.status}` });
+    const productId = req.params.id;
+    const status = req.body.status;
+    const product = await service.setProductStatus(productId, status);
+    await writeAuditLog({ 
+      adminId: req.admin!.id, 
+      action: "STATUS_CHANGE", 
+      entityType: "Product", 
+      entityId: product.id, 
+      description: `تغيرت حالة المنتج إلى ${status}` 
+    });
     res.json({ data: product });
   })
 );

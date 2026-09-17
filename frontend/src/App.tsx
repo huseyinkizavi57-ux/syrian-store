@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
+import { Toaster } from "react-hot-toast";
 import Layout from "./components/Layout";
 import Home from "./pages/Home";
 import Category from "./pages/Category";
@@ -64,23 +65,40 @@ function StoreRoutes() {
 
 export default function App() {
   return (
-    <Routes>
-      <Route path="/admin/*" element={
-        <AdminAuthProvider>
-          <Routes>
-            <Route path="login" element={<AdminLogin />} />
-            <Route element={<AdminLayout />}>
-              <Route index element={<AdminDashboard />} />
-              <Route path="products" element={<AdminProducts />} />
-              <Route path="orders" element={<AdminOrders />} />
-              <Route path="coupons" element={<AdminCoupons />} />
-              <Route path="admins" element={<AdminAdmins />} />
-              <Route path="audit-logs" element={<AdminAuditLog />} />
-            </Route>
-          </Routes>
-        </AdminAuthProvider>
-      } />
-      <Route path="/*" element={<StoreRoutes />} />
-    </Routes>
+    <>
+      <Toaster
+        position="top-center"
+        toastOptions={{
+          duration: 3500,
+          style: {
+            fontFamily: "inherit",
+            fontSize: "13px",
+            borderRadius: "10px",
+            padding: "10px 16px",
+          },
+        }}
+      />
+      <Routes>
+        <Route
+          path="/admin/*"
+          element={
+            <AdminAuthProvider>
+              <Routes>
+                <Route path="login" element={<AdminLogin />} />
+                <Route element={<AdminLayout />}>
+                  <Route index element={<AdminDashboard />} />
+                  <Route path="products" element={<AdminProducts />} />
+                  <Route path="orders" element={<AdminOrders />} />
+                  <Route path="coupons" element={<AdminCoupons />} />
+                  <Route path="admins" element={<AdminAdmins />} />
+                  <Route path="audit-logs" element={<AdminAuditLog />} />
+                </Route>
+              </Routes>
+            </AdminAuthProvider>
+          }
+        />
+        <Route path="/*" element={<StoreRoutes />} />
+      </Routes>
+    </>
   );
 }

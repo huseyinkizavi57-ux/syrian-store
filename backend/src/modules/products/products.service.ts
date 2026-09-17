@@ -44,7 +44,7 @@ export async function listProducts(query: {
       ? { price: "desc" }
       : query.sort === "newest"
       ? { createdAt: "desc" }
-      : { createdAt: "desc" }; // best_selling / rating computed below when needed
+      : { createdAt: "desc" };
 
   const skip = (query.page - 1) * query.pageSize;
 
@@ -65,10 +65,6 @@ export async function listProducts(query: {
     prisma.product.count({ where }),
   ]);
 
-  // Rating filter / sort requires aggregation; done as a post-pass to keep
-  // the primary query index-friendly. Fine at catalog sizes typical for a
-  // single-country store; swap for a materialized rating column if this
-  // becomes a bottleneck at scale.
   let result = items;
   if (query.minRating || query.sort === "rating") {
     const ids = items.map((p) => p.id);
@@ -158,14 +154,24 @@ export async function updateProduct(productId: string, data: Record<string, unkn
 }
 
 export async function setProductStatus(productId: string, status: "ACTIVE" | "INACTIVE" | "ARCHIVED") {
-  return prisma.product.update({ where: { id: productId }, data: { status } });
+  if (!productId) {
+    throw ApiError.badRequest("معرف المنتج مفقود");
+  }
+
+  const existing = await prisma.product.findUnique({
+    where: { id: productId },
+  });
+
+  if (!existing) {
+    throw ApiError.notFound("المنتج غير موجود");
+  }
+
+  return prisma.product.update({
+    where: { id: productId },
+    data: { status },
+  });
 }
 
-// "Delete" from the admin's perspective is always a soft delete (status =
-// ARCHIVED) if the product has any order history, because hard-deleting
-// would corrupt OrderItem's historical display. If it has never been
-// ordered, a real delete is allowed. This resolves the spec's ambiguity
-// between "Delete Product" and "Deactivate Product".
 export async function deleteProduct(productId: string) {
   const orderCount = await prisma.orderItem.count({ where: { productId } });
   if (orderCount > 0) {
