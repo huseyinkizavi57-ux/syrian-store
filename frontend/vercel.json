@@ -1,0 +1,12 @@
+{
+  "rewrites": [
+    {
+      "source": "/uploads/:path*",
+      "destination": "https://syrian-store.onrender.com/uploads/:path*"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
