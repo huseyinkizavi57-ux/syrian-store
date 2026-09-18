@@ -34,11 +34,13 @@ export default function AdminProducts() {
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // States for View & Edit Modals
+  // حالات نوافذ العرض والتعديل
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [editForm, setEditForm] = useState({ name: "", price: "", oldPrice: "", description: "" });
+  const [editImageFile, setEditImageFile] = useState<File | null>(null);
+  const [editImagePreview, setEditImagePreview] = useState<string | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
 
   function getAuthHeader() {
@@ -63,6 +65,14 @@ export default function AdminProducts() {
       const file = e.target.files[0];
       setImageFile(file);
       setImagePreview(URL.createObjectURL(file));
+    }
+  }
+
+  function handleEditFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setEditImageFile(file);
+      setEditImagePreview(URL.createObjectURL(file));
     }
   }
 
@@ -150,6 +160,8 @@ export default function AdminProducts() {
       oldPrice: p.oldPrice ? String(p.oldPrice) : "",
       description: p.description || "",
     });
+    setEditImageFile(null);
+    setEditImagePreview(p.images && p.images[0]?.url ? getImageUrl(p.images[0].url) : null);
     setIsEditModalOpen(true);
   }
 
@@ -165,6 +177,26 @@ export default function AdminProducts() {
     setError(null);
 
     try {
+      const token = localStorage.getItem("adminToken");
+      let imagesPayload = selectedProduct.images;
+
+      if (editImageFile) {
+        const formData = new FormData();
+        formData.append("file", editImageFile);
+
+        const uploadRes = await adminApi.post("/uploads/image", formData, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        const newUrl = uploadRes.data?.data?.url || uploadRes.data?.url || uploadRes.data?.imageUrl;
+        if (newUrl) {
+          imagesPayload = [{ url: newUrl }];
+        }
+      }
+
       await adminApi.patch(
         `/products/${selectedProduct.id}`,
         {
@@ -172,12 +204,15 @@ export default function AdminProducts() {
           price: Number(editForm.price),
           oldPrice: editForm.oldPrice ? Number(editForm.oldPrice) : null,
           description: editForm.description || undefined,
+          images: imagesPayload,
         },
         { headers: getAuthHeader() }
       );
 
       setIsEditModalOpen(false);
       setSelectedProduct(null);
+      setEditImageFile(null);
+      setEditImagePreview(null);
       load();
     } catch (err) {
       setError(getApiErrorMessage(err));
@@ -299,7 +334,7 @@ export default function AdminProducts() {
         </table>
       </div>
 
-      {/* View Details Modal */}
+      {/* نافذة تفاصيل المنتج */}
       {isViewModalOpen && selectedProduct && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
@@ -360,7 +395,7 @@ export default function AdminProducts() {
         </div>
       )}
 
-      {/* Edit Product Modal */}
+      {/* نافذة تعديل المنتج */}
       {isEditModalOpen && selectedProduct && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
@@ -406,11 +441,27 @@ export default function AdminProducts() {
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-1">الوصف</label>
                 <textarea 
-                  rows={3}
+                  rows={3} 
                   value={editForm.description} 
                   onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} 
                   className="w-full border rounded-lg p-2 text-sm focus:ring-1 focus:ring-emerald-500 outline-none" 
                 />
+              </div>
+
+              {/* قسم تعديل ورفع صورة جديدة للمنتج */}
+              <div className="border border-dashed rounded-lg p-3 bg-gray-50 flex items-center justify-between">
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-bold text-gray-700">تغيير صورة المنتج:</label>
+                  <input 
+                    type="file" 
+                    accept="image/jpeg,image/png,image/webp" 
+                    onChange={handleEditFileChange} 
+                    className="text-xs" 
+                  />
+                </div>
+                {editImagePreview && (
+                  <img src={editImagePreview} alt="معاينة" className="w-14 h-14 object-cover rounded border" />
+                )}
               </div>
 
               {error && <p className="text-red-600 text-xs">{error}</p>}
