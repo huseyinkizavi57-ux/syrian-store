@@ -2,7 +2,9 @@ import axios from "axios";
 import toast from "react-hot-toast";
 
 export const adminApi = axios.create({
-  baseURL: (import.meta as any).env?.VITE_API_BASE_URL || "http://localhost:5000/api",
+  baseURL:
+    (import.meta as any).env?.VITE_API_BASE_URL ||
+    "https://syrian-store.onrender.com/api",
   withCredentials: true,
 });
 
