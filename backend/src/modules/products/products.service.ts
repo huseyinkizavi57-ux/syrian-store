@@ -150,7 +150,29 @@ export async function updateProductPrice(productId: string, newPrice: number, ad
 }
 
 export async function updateProduct(productId: string, data: Record<string, unknown>) {
-  return prisma.product.update({ where: { id: productId }, data: data as any });
+  const { images, ...rest } = data;
+
+  const updateData: Prisma.ProductUpdateInput = {
+    ...rest,
+    ...(images && Array.isArray(images)
+      ? {
+          images: {
+            deleteMany: {},
+            create: (images as { url: string; altText?: string; sortOrder?: number }[]).map((img, idx) => ({
+              url: img.url,
+              altText: img.altText,
+              sortOrder: img.sortOrder ?? idx,
+            })),
+          },
+        }
+      : {}),
+  };
+
+  return prisma.product.update({
+    where: { id: productId },
+    data: updateData,
+    include: { images: true, variants: true },
+  });
 }
 
 export async function setProductStatus(productId: string, status: "ACTIVE" | "INACTIVE" | "ARCHIVED") {
