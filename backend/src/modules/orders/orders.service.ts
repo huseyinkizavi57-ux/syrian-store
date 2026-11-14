@@ -121,7 +121,7 @@ export async function cancelOrderByUser(orderId: string, userId: string) {
   return prisma.$transaction(async (tx) => {
     const order = await tx.order.findFirst({ where: { id: orderId, userId }, include: { items: true } });
     if (!order) throw ApiError.notFound("الطلب غير موجود");
-    if (!["PENDING_PAYMENT", "PAID", "PROCESSING"].includes(order.status)) {
+    if (!["PENDING_PAYMENT", "PENDING_CONFIRMATION", "PAID", "PROCESSING"].includes(order.status)) {
       throw ApiError.badRequest("لا يمكن إلغاء الطلب في هذه المرحلة");
     }
     for (const item of order.items) {
@@ -141,7 +141,8 @@ export async function cancelOrderByUser(orderId: string, userId: string) {
 
 // Admin-side status transitions:
 const VALID_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
-  PENDING_PAYMENT: ["PAID", "CANCELLED"], // تم السماح بالانتقال إلى PAID يدوياً للاختبار
+  PENDING_PAYMENT: ["PAID", "CANCELLED"],
+  PENDING_CONFIRMATION: ["PROCESSING", "CANCELLED"],
   PAID: ["PROCESSING", "CANCELLED", "REFUNDED"],
   PROCESSING: ["SHIPPED", "CANCELLED"],
   SHIPPED: ["DELIVERED"],
@@ -169,6 +170,14 @@ export async function adminUpdateOrderStatus(
       for (const item of order.items) {
         await tx.productVariant.update({ where: { id: item.variantId }, data: { stock: { increment: item.quantity } } });
       }
+    }
+
+    // عند تسليم طلب الدفع عند الاستلام، يتم تسجيل الدفعة كمدفوعة تلقائياً
+    if (nextStatus === "DELIVERED") {
+      await tx.payment.updateMany({
+        where: { orderId: order.id, provider: "CASH_ON_DELIVERY", status: "PENDING" },
+        data: { status: "PAID" },
+      });
     }
 
     const updated = await tx.order.update({

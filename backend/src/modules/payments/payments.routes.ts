@@ -12,20 +12,19 @@ import * as service from "./payments.service";
 const router = Router();
 
 const initiateSchema = z.object({
-  body: z.object({ orderId: z.string().uuid() }),
+  body: z.object({
+    orderId: z.string().uuid(),
+    provider: z.enum(["SHAM_CASH", "CASH_ON_DELIVERY"]).optional().default("SHAM_CASH"),
+  }),
   query: z.object({}).optional(),
   params: z.object({}).optional(),
 });
 
-// Customer initiates a payment for their own PENDING_PAYMENT order. Note:
-// no `amount` field accepted here at all — see payments.service.ts.
 router.post("/initiate", requireAuth, paymentLimiter, validate(initiateSchema), asyncHandler(async (req, res) => {
-  const payment = await service.initiatePayment(req.body.orderId, req.user!.id);
+  const payment = await service.initiatePayment(req.body.orderId, req.user!.id, req.body.provider);
   res.status(201).json({ data: payment });
 }));
 
-// Manual "check status" — useful when no webhook is available (polling
-// fallback), and safe to call repeatedly (reconcile is idempotent).
 router.post("/:id/check", requireAuth, asyncHandler(async (req, res) => {
   const payment = await prisma.payment.findUnique({ where: { id: req.params.id } });
   if (!payment) throw ApiError.notFound("عملية الدفع غير موجودة");
@@ -35,18 +34,10 @@ router.post("/:id/check", requireAuth, asyncHandler(async (req, res) => {
   res.json({ data: updated });
 }));
 
-// Real Sham Cash webhook target — currently a placeholder. Once official
-// docs exist this must verify the request signature (HMAC or similar)
-// BEFORE calling handleProviderWebhook, using SHAM_CASH_SECRET. Do not wire
-// this up to accept unauthenticated calls in production; it is intentionally
-// not mounted with any auth middleware right now because we don't yet know
-// Sham Cash's real auth scheme for webhooks (spec: "لا تخترع authentication
-// scheme").
 router.post("/shamcash/webhook", asyncHandler(async (req, res) => {
   throw ApiError.internal("Webhook Sham Cash غير مفعّل — بانتظار التوثيق الرسمي والتحقق من التوقيع");
 }));
 
-// Admin: view payments for an order.
 router.get(
   "/admin/order/:orderId",
   requireAdmin,

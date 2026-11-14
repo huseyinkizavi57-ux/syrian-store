@@ -1,12 +1,3 @@
-// Abstraction boundary the spec explicitly asked for:
-//
-//   PaymentService
-//     -> ShamCashPaymentService (implements this interface)
-//       -> Sham Cash API
-//
-// Swapping in the real Sham Cash integration later means implementing this
-// interface with real HTTP calls — nothing above this layer (orders,
-// payments.service, routes) needs to change.
 export interface InitiatePaymentInput {
   orderId: string;
   amount: number;
@@ -16,7 +7,7 @@ export interface InitiatePaymentInput {
 
 export interface InitiatePaymentResult {
   providerReference: string;
-  redirectUrl?: string; // if the provider requires redirecting the user to complete payment
+  redirectUrl?: string;
   raw: unknown;
 }
 
@@ -30,8 +21,10 @@ export interface VerifyPaymentResult {
   raw: unknown;
 }
 
+export type SupportedPaymentProvider = "SHAM_CASH" | "CASH_ON_DELIVERY" | "MOCK";
+
 export interface PaymentProviderAdapter {
-  readonly name: "SHAM_CASH" | "MOCK";
+  readonly name: SupportedPaymentProvider;
   initiate(input: InitiatePaymentInput): Promise<InitiatePaymentResult>;
   verify(input: VerifyPaymentInput): Promise<VerifyPaymentResult>;
 }
