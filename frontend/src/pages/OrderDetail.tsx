@@ -12,10 +12,16 @@ type Order = {
 };
 
 const STATUS_LABELS: Record<string, string> = {
-  PENDING_PAYMENT: "بانتظار الدفع", PAID: "تم الدفع", PROCESSING: "قيد التجهيز",
-  SHIPPED: "تم الشحن", DELIVERED: "تم التسليم", CANCELLED: "ملغى", REFUNDED: "مسترجع",
+  PENDING_PAYMENT: "بانتظار الدفع", 
+  PENDING_CONFIRMATION: "بانتظار التأكيد",
+  PAID: "تم الدفع", 
+  PROCESSING: "قيد التجهيز",
+  SHIPPED: "تم الشحن", 
+  DELIVERED: "تم التسليم", 
+  CANCELLED: "ملغى", 
+  REFUNDED: "مسترجع",
 };
-const TIMELINE = ["PENDING_PAYMENT", "PAID", "PROCESSING", "SHIPPED", "DELIVERED"];
+const TIMELINE = ["PENDING_PAYMENT", "PENDING_CONFIRMATION", "PAID", "PROCESSING", "SHIPPED", "DELIVERED"];
 
 export default function OrderDetail() {
   const { id } = useParams();
@@ -35,7 +41,6 @@ export default function OrderDetail() {
     setError(null);
     try {
       const initRes = await api.post("/payments/initiate", { orderId: id });
-      // MOCK provider settles instantly; poll/check once to reconcile then reload.
       await api.post(`/payments/${initRes.data.data.id}/check`);
       await load();
     } catch (err) {
@@ -63,7 +68,7 @@ export default function OrderDetail() {
     <div className="max-w-2xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold">طلب #{order.orderNumber}</h1>
-        <span className="text-sm font-medium px-3 py-1 rounded-full bg-brand/10 text-brand">{STATUS_LABELS[order.status]}</span>
+        <span className="text-sm font-medium px-3 py-1 rounded-full bg-brand/10 text-brand">{STATUS_LABELS[order.status] ?? order.status}</span>
       </div>
 
       {!["CANCELLED", "REFUNDED"].includes(order.status) && (
@@ -89,6 +94,16 @@ export default function OrderDetail() {
             {paying ? "جاري المعالجة..." : "الدفع عبر Sham Cash"}
           </button>
           <button onClick={handleCancel} className="mt-3 mr-3 text-red-600 text-sm">إلغاء الطلب</button>
+        </div>
+      )}
+
+      {order.status === "PENDING_CONFIRMATION" && (
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm flex justify-between items-center">
+          <div>
+            <p className="font-medium text-blue-900">تم اختيار الدفع عند الاستلام — طلبك بانتظار التأكيد من الإدارة.</p>
+            <p className="text-xs text-blue-700 mt-0.5">سيتم التواصل معك هاتفياً قريباً لتأكيد الشحن وتوصيله إلى باب منزلك.</p>
+          </div>
+          <button onClick={handleCancel} className="text-red-600 text-xs font-semibold hover:underline">إلغاء الطلب</button>
         </div>
       )}
 

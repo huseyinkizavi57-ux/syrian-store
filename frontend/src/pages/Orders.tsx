@@ -5,8 +5,14 @@ import { api } from "../services/api";
 type Order = { id: string; orderNumber: string; status: string; total: number; createdAt: string; items: { id: string }[] };
 
 const STATUS_LABELS: Record<string, string> = {
-  PENDING_PAYMENT: "بانتظار الدفع", PAID: "تم الدفع", PROCESSING: "قيد التجهيز",
-  SHIPPED: "تم الشحن", DELIVERED: "تم التسليم", CANCELLED: "ملغى", REFUNDED: "مسترجع",
+  PENDING_PAYMENT: "بانتظار الدفع",
+  PENDING_CONFIRMATION: "بانتظار التأكيد",
+  PAID: "تم الدفع",
+  PROCESSING: "قيد التجهيز",
+  SHIPPED: "تم الشحن",
+  DELIVERED: "تم التسليم",
+  CANCELLED: "ملغى",
+  REFUNDED: "مسترجع",
 };
 
 export default function Orders() {
@@ -29,8 +35,8 @@ export default function Orders() {
               <p className="text-xs text-gray-500">{new Date(o.createdAt).toLocaleDateString("ar-SY")} — {o.items.length} منتج</p>
             </div>
             <div className="text-left">
-              <p className="font-bold text-brand">{o.total.toLocaleString("ar-SY")} ل.س</p>
-              <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100">{STATUS_LABELS[o.status]}</span>
+              <p className="font-bold text-brand">{Number(o.total).toLocaleString("ar-SY")} ل.س</p>
+              <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100">{STATUS_LABELS[o.status] ?? o.status}</span>
             </div>
           </div>
         </Link>

@@ -22,6 +22,7 @@ type Order = {
 
 const STATUS_LABELS: Record<string, string> = {
   PENDING_PAYMENT: "بانتظار الدفع", 
+  PENDING_CONFIRMATION: "بانتظار التأكيد",
   PAID: "تم الدفع", 
   PROCESSING: "قيد التجهيز",
   SHIPPED: "تم الشحن", 
@@ -32,6 +33,7 @@ const STATUS_LABELS: Record<string, string> = {
 
 const STATUS_STYLES: Record<string, string> = {
   PENDING_PAYMENT: "bg-amber-100 text-amber-700 border-amber-200",
+  PENDING_CONFIRMATION: "bg-yellow-100 text-yellow-800 border-yellow-300",
   PAID: "bg-blue-100 text-blue-700 border-blue-200",
   PROCESSING: "bg-indigo-100 text-indigo-700 border-indigo-200",
   SHIPPED: "bg-purple-100 text-purple-700 border-purple-200",
@@ -42,6 +44,7 @@ const STATUS_STYLES: Record<string, string> = {
 
 const NEXT_STATUS: Record<string, string[]> = {
   PENDING_PAYMENT: ["PAID", "CANCELLED"],
+  PENDING_CONFIRMATION: ["PROCESSING", "CANCELLED"],
   PAID: ["PROCESSING", "CANCELLED"],
   PROCESSING: ["SHIPPED", "CANCELLED"],
   SHIPPED: ["DELIVERED"],
